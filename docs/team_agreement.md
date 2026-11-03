@@ -11,8 +11,8 @@
 The course deadline is the outer limit: PR open by **2:00 AM Thursday**, reviewed and merged by
 **10:00 AM Thursday**. Our own deadline is earlier:
 
-- **Our PRs are open by:** `<Thursday 10pm>`
-- **Why that time works for us:** `<Due to how our schedules and workloads work out, we may need to work on PRs late on Thursday, but to make sure we get enough sleep and don't require members to stay up late to review, we will be requiring PRs to be submitted by 10pm on Thursday.>`
+- **Our PRs are open by:** `<Wednesday 10pm>`
+- **Why that time works for us:** `<Due to how our schedules and workloads work out, we may need to work on PRs late on Wednesday, but to make sure we get enough sleep and don't require members to stay up late to review, we will be requiring PRs to be submitted by 10pm on Wednesday.>`
 
 ## Reviews
 
