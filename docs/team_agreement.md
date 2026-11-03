@@ -30,4 +30,5 @@ Everyone on the team adds their name and GitHub username in the PR that commits 
 
 | Name | GitHub |
 |Gideon Stewman |CSU-gstew|
+|Cooper Westervelt |Cooper_W_04|
 | | |
