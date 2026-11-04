@@ -1,0 +1,89 @@
+openapi: 3.0.3
+info:
+  title: DoodleDungeon API
+  description: Backend API for the DoodleDungeon Android app
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080/api
+    description: Local development server
+
+paths:
+  /auth/github:
+    post:
+      summary: Authenticate with GitHub
+      description: Exchanges a GitHub authorization code for an app session token (JWT).
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GitHubLoginRequest'
+      responses:
+        '200':
+          description: Successfully authenticated. Returns a session token and user info.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Bad request (e.g., missing code).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized (e.g., invalid or expired GitHub code).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    GitHubLoginRequest:
+      type: object
+      required:
+        - code
+      properties:
+        code:
+          type: string
+          description: The temporary authorization code received from GitHub's redirect.
+          example: "abcdef1234567890"
+
+    AuthResponse:
+      type: object
+      required:
+        - token
+        - user
+      properties:
+        token:
+          type: string
+          description: Your backend's session token (like a JWT) for this user.
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        user:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 12345
+            username:
+              type: string
+              example: "octocat"
+            avatar_url:
+              type: string
+              example: "https://avatars.githubusercontent.com/u/583231?v=4"
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          example: "invalid_code"
+        message:
+          type: string
+          example: "The provided authorization code is invalid or has expired."
