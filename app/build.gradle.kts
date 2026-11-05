@@ -1,6 +1,33 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("io.gitlab.arturbosch.detekt")
+    id("pmd")
+}
+
+detekt {
+    toolVersion = "1.23.8"
+    source.setFrom("src/main/java")
+    config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
+    buildUponDefaultConfig = true
+}
+
+pmd {
+    toolVersion = "7.16.0"
+    ruleSetFiles = files("$rootDir/config/pmd/ruleset.xml")
+    ruleSets = emptyList()
+    isIgnoreFailures = false
+}
+
+// Android modules do not expose the Java Plugin's pmdMain source set task.
+// Keep PMD scoped to Java sources in this module; Kotlin is checked by Detekt.
+tasks.register<Pmd>("pmdJava") {
+    group = "verification"
+    description = "Runs PMD against Java sources in the app module."
+    source(fileTree("src/main/java") { include("**/*.java") })
+    classpath = files()
+    ruleSetFiles = files("$rootDir/config/pmd/ruleset.xml")
+    ruleSets = emptyList()
 }
 
 android {
