@@ -1,0 +1,16 @@
+
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+!.env.sample
+secrets/
+secret/
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+service-account*.json
+credentials*.json
