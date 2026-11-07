@@ -35,7 +35,7 @@ app's short-lived token after sign-in. OAuth credentials stay on the server.
 
 ## Database ERD
 
-This diagram matches the initial PostgreSQL schema in `database/schema.sql`.
+This diagram matches the initial PostgreSQL schema in `schema.sql` (in this directory).
 
 ```mermaid
 erDiagram

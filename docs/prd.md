@@ -1,6 +1,6 @@
 # Product Requirements Document (PRD): Doodle Dungeon (temp name).
 
-**Team:** Team 06 · **Repo:** https://github.com/CST438-Project-3/Project03 · **Last updated:** 10/28/2026
+**Team:** Team 06 · **Repo:** https://github.com/CST438-Project-3/DoodleDungeon · **Last updated:** 10/28/2026
 
 ---
 

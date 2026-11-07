@@ -1,3 +1,0 @@
-# Keep Detekt's default rule sets and fail CI when they report any issues.
-build:
-  maxIssues: 0
