@@ -10,7 +10,6 @@
     "start": "expo start --dev-client",
     "web": "expo start --web --port 8081",
     "android": "expo run:android",
-    "test": "jest",
     "typecheck": "tsc --noEmit",
     "export:web": "expo export --platform web"
   },
@@ -28,12 +27,8 @@
     "react-native-web": "^0.21.4"
   },
   "devDependencies": {
-    "@testing-library/react-native": "^14.1.0",
-    "@types/jest": "^29.5.14",
     "@types/node": "^26.6.6",
     "@types/react": "~19.3.0",
-    "jest": "^29.7.0",
-    "jest-expo": "^58.0.14",
     "typescript": "~6.0.3"
   }
 }

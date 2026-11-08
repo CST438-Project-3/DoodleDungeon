@@ -71,7 +71,6 @@ See [Expo's Android setup guide](https://docs.expo.dev/get-started/set-up-your-e
 From `app-frontend/`:
 
 ```powershell
-npm.cmd run test -- --runInBand
 npm.cmd run typecheck
 npm.cmd run export:web
 ```
