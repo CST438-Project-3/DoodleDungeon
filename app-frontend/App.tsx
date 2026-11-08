@@ -11,43 +11,96 @@ const github = {
   tokenEndpoint: 'https://github.com/login/oauth/access_token',
 };
 
-/** Opens GitHub authorization and displays the returned code. */
+const defaultGoogleClientId = 'TODO_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
+const google = {
+  authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
+  tokenEndpoint: 'https://oauth2.googleapis.com/token',
+  revocationEndpoint: 'https://oauth2.googleapis.com/revoke',
+};
+
 export default function App() {
   const [authCode, setAuthCode] = useState<string | null>(null);
+  const [authProvider, setAuthProvider] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const clientId = (Platform.OS === 'web'
+
+  // GitHub Auth Request
+  const githubClientId = (Platform.OS === 'web'
     ? process.env.EXPO_PUBLIC_GITHUB_WEB_CLIENT_ID
     : process.env.EXPO_PUBLIC_GITHUB_ANDROID_CLIENT_ID) || defaultGithubClientId;
-  const redirectUri = Platform.OS === 'web'
+
+  const githubRedirectUri = Platform.OS === 'web'
     ? process.env.EXPO_PUBLIC_GITHUB_WEB_REDIRECT_URI || AuthSession.makeRedirectUri()
     : 'doodledungeon://login';
-  const [request, response, promptAsync] = AuthSession.useAuthRequest({
-    clientId,
-    redirectUri,
+
+  const [githubRequest, githubResponse, githubPromptAsync] = AuthSession.useAuthRequest({
+    clientId: githubClientId,
+    redirectUri: githubRedirectUri,
     responseType: AuthSession.ResponseType.Code,
     usePKCE: false,
   }, github);
 
+  // Google Auth Request
+  const googleClientId = (Platform.OS === 'web'
+    ? process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID
+    : process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID) || defaultGoogleClientId;
+
+  const googleRedirectUri = Platform.OS === 'web'
+    ? process.env.EXPO_PUBLIC_GOOGLE_WEB_REDIRECT_URI || AuthSession.makeRedirectUri()
+    : 'doodledungeon://login';
+
+  const [googleRequest, googleResponse, googlePromptAsync] = AuthSession.useAuthRequest({
+    clientId: googleClientId,
+    redirectUri: googleRedirectUri,
+    responseType: AuthSession.ResponseType.Code,
+    scopes: ['openid', 'profile', 'email'],
+    usePKCE: true,
+  }, google);
+
+  // Handle GitHub Response
   useEffect(() => {
-    if (response?.type === 'success' && response.params.code) {
-      setAuthCode(response.params.code);
-    } else if (response?.type === 'error') {
+    if (githubResponse?.type === 'success' && githubResponse.params.code) {
+      setAuthCode(githubResponse.params.code);
+      setAuthProvider('GitHub');
+    } else if (githubResponse?.type === 'error') {
       setError('GitHub login did not complete. Please try again.');
     }
-  }, [response]);
+  }, [githubResponse]);
+
+  // Handle Google Response
+  useEffect(() => {
+    if (googleResponse?.type === 'success' && googleResponse.params.code) {
+      setAuthCode(googleResponse.params.code);
+      setAuthProvider('Google');
+    } else if (googleResponse?.type === 'error') {
+      setError('Google login did not complete. Please try again.');
+    }
+  }, [googleResponse]);
 
   return (
     <View style={styles.container}>
       {authCode === null ? (
-        <Button title="Login with GitHub" disabled={!request} onPress={() => {
-          setError(null);
-          void promptAsync().catch(() => setError('Unable to open GitHub login.'));
-        }} />
+        <>
+          <Button title="Login with GitHub" disabled={!githubRequest} onPress={() => {
+            setError(null);
+            void githubPromptAsync().catch(() => setError('Unable to open GitHub login.'));
+          }} />
+          <View style={styles.spacer} />
+          <Button title="Login with Google" disabled={!googleRequest} onPress={() => {
+            setError(null);
+            void googlePromptAsync().catch(() => setError('Unable to open Google login.'));
+          }} />
+        </>
       ) : (
         <>
-          <Text>Success! Code: {authCode}</Text>
+          <Text>Success with {authProvider}! Code: {authCode}</Text>
           <View style={styles.spacer} />
           <Text>Now we need to send this to the backend!</Text>
+          <View style={styles.spacer} />
+          <Button title="Reset Login" onPress={() => {
+            setAuthCode(null);
+            setAuthProvider(null);
+            setError(null);
+          }} />
         </>
       )}
       {error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
