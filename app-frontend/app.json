@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "DoodleDungeon",
+    "slug": "doodledungeon",
+    "version": "0.1.0",
+    "scheme": "doodledungeon",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "android": {
+      "package": "com.example.doodledungeon"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "name": "DoodleDungeon"
+    },
+    "plugins": [
+      "expo-dev-client",
+      "expo-web-browser"
+    ]
+  }
+}

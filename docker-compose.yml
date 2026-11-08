@@ -1,10 +1,7 @@
-# Run `docker compose up --build` to build the verification image locally.
 services:
-  android-checks:
+  frontend-checks:
     image: ghcr.io/cst438-project-3/doodledungeon:latest
     build:
-      context: .
+      context: ./app-frontend
       dockerfile: Dockerfile
-    # The Dockerfile runs tests and checkers while building the image. This
-    # one-shot command lets `docker compose up --build` finish successfully.
     entrypoint: ["/bin/true"]

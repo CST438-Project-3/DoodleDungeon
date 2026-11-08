@@ -1,5 +1,3 @@
-
-# Local environment and credentials
 .env
 .env.*
 !.env.example
@@ -14,3 +12,17 @@ secret/
 *.keystore
 service-account*.json
 credentials*.json
+**/.gradle/
+**/build/
+**/.idea/
+**/local.properties
+*.iml
+
+**/node_modules/
+**/.expo/
+**/dist/
+**/coverage/
+/app-frontend/android/
+/app-frontend/ios/
+*.tsbuildinfo
+npm-debug.log*
