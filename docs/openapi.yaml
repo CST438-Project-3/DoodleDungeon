@@ -33,6 +33,37 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /auth/google:
+    post:
+      summary: Authenticate with Google
+      description: Exchanges a Google authorization code and PKCE verifier for an app session token (JWT).
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoogleLoginRequest'
+      responses:
+        '200':
+          description: Successfully authenticated. Returns a session token and user info.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Bad request (e.g., missing code or PKCE verifier).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized (e.g., invalid or expired Google code).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: Unauthorized (e.g., invalid or expired GitHub code).
           content:
@@ -51,6 +82,24 @@ components:
           type: string
           description: The temporary authorization code received from GitHub's redirect.
           example: "abcdef1234567890"
+
+    GoogleLoginRequest:
+      type: object
+      required:
+        - code
+        - redirectUri
+        - codeVerifier
+      properties:
+        code:
+          type: string
+          description: The temporary authorization code received from Google's redirect.
+        redirectUri:
+          type: string
+          format: uri
+          description: The redirect URI used to obtain the authorization code.
+        codeVerifier:
+          type: string
+          description: The PKCE verifier paired with the authorization request.
 
     AuthResponse:
       type: object

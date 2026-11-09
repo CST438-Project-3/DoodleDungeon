@@ -27,10 +27,21 @@ function getButton(title: string) {
 
 describe('App', () => {
   beforeEach(() => {
+    jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        token: 'session-token',
+        user: { id: 'user-id', display_name: 'Test Player' },
+      }),
+    } as Response);
     mockGithubResponse = null;
     mockGoogleResponse = null;
     mockGithubPromptAsync.mockReset().mockResolvedValue(undefined);
     mockGooglePromptAsync.mockReset().mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   it('renders both login options when no response has been received', async () => {
@@ -46,7 +57,8 @@ describe('App', () => {
     mockGithubResponse = { type: 'success', params: { code: 'github-code' } };
     await view.rerender(<App />);
 
-    expect(await screen.findByText('Success with GitHub! Code: github-code')).toBeOnTheScreen();
+    expect(await screen.findByText('Signed in with GitHub.')).toBeOnTheScreen();
+    expect(await screen.findByText('Welcome, Test Player!')).toBeOnTheScreen();
 
     await fireEvent.press(getButton('Reset Login'));
     await view.rerender(<App />);

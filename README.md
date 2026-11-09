@@ -33,19 +33,26 @@ screen. Press Ctrl+C to stop the server. On macOS/Linux use `npm` instead of
 
 ## GitHub configuration
 
-The client opens GitHub authorization and displays the returned code. It does
-not exchange that code for an application session yet.
+The client exchanges the authorization code with the backend and displays the
+signed-in user. The backend must expose the endpoints in `docs/openapi.yaml`.
 
 The Android callback is `doodledungeon://login`. Web development uses
 `http://localhost:8081`. Register a separate GitHub OAuth App for each callback.
 The Android client ID defaults to the value in `App.tsx`.
 
-To override the public client IDs, copy `app-frontend/.env.example` to
+To configure the API and public client IDs, copy `app-frontend/.env.example` to
 `app-frontend/.env` and set:
 
+- `EXPO_PUBLIC_API_BASE_URL`
 - `EXPO_PUBLIC_GITHUB_WEB_CLIENT_ID`
 - `EXPO_PUBLIC_GITHUB_WEB_REDIRECT_URI`
 - `EXPO_PUBLIC_GITHUB_ANDROID_CLIENT_ID`
+- `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`
+- `EXPO_PUBLIC_GOOGLE_WEB_REDIRECT_URI`
+- `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID`
+
+Google client IDs are intentionally not bundled as defaults. Configure the
+appropriate web and Android client IDs in `.env`; do not commit credentials.
 
 Restart Expo after changing `.env`. Never put provider secrets in the frontend;
 `EXPO_PUBLIC_*` values are included in the application bundle.
