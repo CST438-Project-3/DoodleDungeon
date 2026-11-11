@@ -1,4 +1,4 @@
-package doodledungeon;
+package doodledungeon.dto;
 
 import java.util.UUID;
 

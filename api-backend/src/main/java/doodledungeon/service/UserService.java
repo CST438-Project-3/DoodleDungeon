@@ -1,5 +1,8 @@
-package doodledungeon;
+package doodledungeon.service;
 
+import doodledungeon.repository.UserRepository;
+import doodledungeon.dto.UpdateUserProfileRequest;
+import doodledungeon.dto.UserProfile;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
