@@ -13,7 +13,7 @@ const PALETTE = [
   { name: 'Green', color: '#388e3c' },
 ];
 
-/** Creates and previews a guardian in memory. */
+
 export default function CreateGuardianScreen({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState('');
   const [guardianClass, setGuardianClass] = useState<GuardianClass | null>(null);
@@ -36,7 +36,7 @@ export default function CreateGuardianScreen({ onClose }: { onClose: () => void 
       <View style={styles.form}>
         <Button title="Back to login" onPress={onClose} />
         <Text accessibilityRole="header" style={styles.title}>{guardian ? 'Guardian created' : 'Create a guardian'}</Text>
-        <Text style={styles.notice}>Local demo: your guardian resets when you leave this screen or refresh.</Text>
+        <Text style={styles.notice}>(Local Demo for now until connected to database :P)</Text>
         {guardian ? (
           <>
             <View style={[styles.card, { backgroundColor: CLASS_COLORS[guardian.guardianClass] }]}>
