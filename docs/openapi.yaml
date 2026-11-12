@@ -3,21 +3,25 @@ info:
   title: DoodleDungeon API
   description: Backend API for the DoodleDungeon Android app
   version: 1.0.0
-
 servers:
-  - url: http://localhost:8080/api
-    description: Local development server
+  - url: /api
+    description: API base path relative to the server hosting this document
 
 tags:
   - name: Authentication
+    description: Sign in with a supported identity provider.
   - name: Users
+    description: View and update the signed-in user's profile.
   - name: Rosters
+    description: Manage the signed-in user's rosters.
 
 paths:
   /auth/github:
     post:
+      operationId: authenticateWithGitHub
       summary: Authenticate with GitHub
       description: Exchanges a GitHub authorization code for an app session token (JWT).
+      security: []
       tags:
         - Authentication
       requestBody:
@@ -48,8 +52,10 @@ paths:
 
   /auth/google:
     post:
+      operationId: authenticateWithGoogle
       summary: Authenticate with Google
       description: Exchanges a Google authorization code and PKCE verifier for an app session token (JWT).
+      security: []
       tags:
         - Authentication
       requestBody:
@@ -80,7 +86,8 @@ paths:
 
   /user/rosters:
     get:
-      summary: Retrieve the signed-in user's rosters
+      operationId: listUserRosters
+      summary: List the signed-in user's rosters
       description: Returns the rosters owned by the signed-in user.
       tags:
         - Rosters
@@ -107,6 +114,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
 
     post:
+      operationId: createUserRoster
       summary: Create a roster
       description: Creates a roster owned by the signed-in user with the selected members.
       tags:
@@ -149,6 +157,7 @@ paths:
           format: uuid
 
     put:
+      operationId: replaceUserRoster
       summary: Replace a roster
       description: Replaces a roster's members with the user's selected members.
       tags:
@@ -188,6 +197,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
 
     patch:
+      operationId: updateUserRosterMembers
       summary: Change a roster's members
       description: Replaces the members in the signed-in user's roster.
       tags:
@@ -227,6 +237,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
 
     delete:
+      operationId: deleteUserRoster
       summary: Delete a roster
       description: Deletes a roster owned by the signed-in user.
       tags:
@@ -257,6 +268,7 @@ paths:
 
   /users/me:
     get:
+      operationId: getCurrentUserProfile
       tags:
         - Users
       summary: Get the signed-in user's profile
@@ -275,6 +287,7 @@ paths:
           description: The user's profile was not found.
 
     patch:
+      operationId: updateCurrentUserProfile
       tags:
         - Users
       summary: Update the signed-in user's profile
@@ -302,6 +315,7 @@ paths:
           description: The user's profile was not found.
 
     delete:
+      operationId: deleteCurrentUserAccount
       tags:
         - Users
       summary: Delete the signed-in user's account

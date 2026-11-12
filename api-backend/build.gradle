@@ -1,15 +1,16 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '4.0.9'
+    // Adds Spring Boot run/package tasks and version-aware application conventions.
+    id 'org.springframework.boot' version '4.1.2'
 }
 
-group = 'com.cst438'
-version = '0.0.1-SNAPSHOT'
-description = 'doodledungeon-api'
+group = 'com.cst438.doodledungeon'
+version = '0.1.0-SNAPSHOT'
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
+        // Use the project's JDK without changing the machine's JAVA_HOME or PATH.
+        languageVersion = JavaLanguageVersion.of(21)
     }
 }
 
@@ -18,12 +19,18 @@ repositories {
 }
 
 dependencies {
-    implementation platform('org.springframework.boot:spring-boot-dependencies:4.0.9')
+    // Spring's dependency BOM keeps the Spring module versions compatible with the Boot plugin.
+    implementation platform('org.springframework.boot:spring-boot-dependencies:4.1.2')
+    // Spring MVC provides the REST controller and JSON request/response support.
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springframework.boot:spring-boot-starter-jdbc'
-
+    implementation 'org.flywaydb:flyway-core'
+    // The migration integration test calls Flyway directly, so keep it explicit on the test classpath too.
+    testImplementation 'org.flywaydb:flyway-core'
+    runtimeOnly 'org.flywaydb:flyway-database-postgresql'
     runtimeOnly 'org.postgresql:postgresql'
 
+    // The test starters provide JUnit/Mockito and Spring's MockMvc controller test support.
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
     testImplementation 'org.testcontainers:testcontainers-junit-jupiter:2.0.5'

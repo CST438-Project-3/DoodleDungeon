@@ -34,34 +34,46 @@ CREATE TABLE guardians (
                            updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Teams are reusable for either dungeon defense or raid parties.
+CREATE TABLE rosters (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    owner_user_id UUID NOT NULL
+        REFERENCES app_users(id) ON DELETE CASCADE,
+    roster_type TEXT NOT NULL
+        CHECK (roster_type IN ('defense', 'raid')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT rosters_id_owner_unique UNIQUE (id, owner_user_id)
+);
+
+-- A roster has at most three ordered slots; empty slots have no row.
+CREATE TABLE roster_members (
+    roster_id UUID NOT NULL
+        REFERENCES rosters(id) ON DELETE CASCADE,
+    slot_number SMALLINT NOT NULL
+        CHECK (slot_number BETWEEN 1 AND 3),
+    guardian_id UUID NOT NULL
+        REFERENCES guardians(id) ON DELETE CASCADE,
+    CONSTRAINT roster_members_pk PRIMARY KEY (roster_id, slot_number)
+);
+
 CREATE TABLE dungeons (
                           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                           owner_user_id UUID NOT NULL UNIQUE
                               REFERENCES app_users(id) ON DELETE CASCADE,
+                          defense_roster_id UUID NOT NULL UNIQUE,
+                          CONSTRAINT dungeons_defense_roster_owner_fk
+                              FOREIGN KEY (defense_roster_id, owner_user_id)
+                                  REFERENCES rosters(id, owner_user_id) ON DELETE CASCADE,
                           created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
                           updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE TABLE dungeon_rooms (
-                               id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                               dungeon_id UUID NOT NULL
-                                   REFERENCES dungeons(id) ON DELETE CASCADE,
-                               room_number SMALLINT NOT NULL
-                                   CHECK (room_number BETWEEN 1 AND 3),
-                               guardian_id UUID
-                                   REFERENCES guardians(id) ON DELETE SET NULL,
-                               created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                               updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                               CONSTRAINT dungeon_rooms_number_unique
-                                   UNIQUE (dungeon_id, room_number),
-                               CONSTRAINT dungeon_rooms_guardian_unique
-                                   UNIQUE (guardian_id)
 );
 
 CREATE TABLE raids (
                        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                        attacker_user_id UUID NOT NULL
                            REFERENCES app_users(id) ON DELETE CASCADE,
+                       party_roster_id UUID NOT NULL,
                        target_dungeon_id UUID NOT NULL
                            REFERENCES dungeons(id) ON DELETE CASCADE,
                        status TEXT NOT NULL DEFAULT 'pending'
@@ -70,6 +82,9 @@ CREATE TABLE raids (
                            CHECK (outcome IN ('attacker_win', 'defender_win', 'draw')),
                        started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
                        completed_at TIMESTAMPTZ,
+                       CONSTRAINT raids_party_roster_owner_fk
+                           FOREIGN KEY (party_roster_id, attacker_user_id)
+                               REFERENCES rosters(id, owner_user_id) ON DELETE CASCADE,
                        CONSTRAINT raids_completion_after_start
                            CHECK (completed_at IS NULL OR completed_at >= started_at),
                        CONSTRAINT raids_state_is_consistent
@@ -88,18 +103,6 @@ CREATE TABLE raids (
                                )
 );
 
-CREATE TABLE raid_party_members (
-                                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                                    raid_id UUID NOT NULL
-                                        REFERENCES raids(id) ON DELETE CASCADE,
-                                    slot_number SMALLINT NOT NULL
-                                        CHECK (slot_number BETWEEN 1 AND 3),
-                                    guardian_id UUID
-                                        REFERENCES guardians(id) ON DELETE SET NULL,
-                                    CONSTRAINT raid_party_slot_unique
-                                        UNIQUE (raid_id, slot_number)
-);
-
 CREATE TABLE battle_logs (
                              id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                              raid_id UUID NOT NULL UNIQUE
@@ -116,8 +119,8 @@ CREATE INDEX auth_identities_user_id_idx
 CREATE INDEX guardians_owner_created_idx
     ON guardians (owner_user_id, created_at DESC);
 
-CREATE INDEX dungeon_rooms_dungeon_idx
-    ON dungeon_rooms (dungeon_id);
+CREATE INDEX roster_members_guardian_idx
+    ON roster_members (guardian_id);
 
 CREATE INDEX raids_attacker_started_idx
     ON raids (attacker_user_id, started_at DESC);
@@ -125,8 +128,8 @@ CREATE INDEX raids_attacker_started_idx
 CREATE INDEX raids_target_started_idx
     ON raids (target_dungeon_id, started_at DESC);
 
-CREATE INDEX raid_party_members_raid_idx
-    ON raid_party_members (raid_id);
+CREATE INDEX raids_party_roster_idx
+    ON raids (party_roster_id);
 
 CREATE FUNCTION set_updated_at()
     RETURNS TRIGGER
@@ -150,6 +153,6 @@ CREATE TRIGGER dungeons_set_updated_at
     BEFORE UPDATE ON dungeons
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
-CREATE TRIGGER dungeon_rooms_set_updated_at
-    BEFORE UPDATE ON dungeon_rooms
+CREATE TRIGGER rosters_set_updated_at
+    BEFORE UPDATE ON rosters
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
