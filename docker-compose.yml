@@ -1,7 +1,18 @@
 services:
+  backend-tests:
+    image: gradle:8.14.4-jdk21
+    working_dir: /workspace
+    volumes:
+      - ./api-backend:/workspace
+      - backend-gradle-cache:/home/gradle/.gradle
+    command: ["gradle", "--no-daemon", "test"]
+
   frontend-checks:
     image: ghcr.io/cst438-project-3/doodledungeon:latest
     build:
       context: ./app-frontend
       dockerfile: Dockerfile
     entrypoint: ["/bin/true"]
+
+volumes:
+  backend-gradle-cache:

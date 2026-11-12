@@ -9,7 +9,9 @@ servers:
     description: Local development server
 
 tags:
+  - name: Authentication
   - name: Users
+  - name: Rosters
 
 paths:
   /auth/github:
@@ -32,13 +34,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/AuthResponse'
         '400':
-          description: Bad request (e.g., missing code).
+          description: Bad request, such as a missing authorization code.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '401':
-          description: Unauthorized (e.g., invalid or expired GitHub code).
+          description: Unauthorized, such as an invalid or expired GitHub code.
           content:
             application/json:
               schema:
@@ -64,13 +66,190 @@ paths:
               schema:
                 $ref: '#/components/schemas/AuthResponse'
         '400':
-          description: Bad request (e.g., missing code or PKCE verifier).
+          description: Bad request, such as a missing code or PKCE verifier.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '401':
-          description: Unauthorized (e.g., invalid or expired Google code).
+          description: Unauthorized, such as an invalid or expired Google code.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /user/rosters:
+    get:
+      summary: Retrieve the signed-in user's rosters
+      description: Returns the rosters owned by the signed-in user.
+      tags:
+        - Rosters
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The user's rosters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserRosterData'
+        '400':
+          description: The request was invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authorization.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: Create a roster
+      description: Creates a roster owned by the signed-in user with the selected members.
+      tags:
+        - Rosters
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRosterRequest'
+      responses:
+        '201':
+          description: The roster was created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserNewRosterData'
+        '400':
+          description: The request contains an invalid member selection.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authorization.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /user/rosters/{rosterId}:
+    parameters:
+      - name: rosterId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    put:
+      summary: Replace a roster
+      description: Replaces a roster's members with the user's selected members.
+      tags:
+        - Rosters
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRosterRequest'
+      responses:
+        '200':
+          description: The roster was replaced.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserNewRosterData'
+        '400':
+          description: The request contains an invalid member selection.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authorization.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: The roster does not exist or does not belong to the signed-in user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    patch:
+      summary: Change a roster's members
+      description: Replaces the members in the signed-in user's roster.
+      tags:
+        - Rosters
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRosterUpdateData'
+      responses:
+        '200':
+          description: The roster members were updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserNewRosterData'
+        '400':
+          description: The request contains an invalid member selection.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authorization.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: The roster does not exist or does not belong to the signed-in user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Delete a roster
+      description: Deletes a roster owned by the signed-in user.
+      tags:
+        - Rosters
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: The roster was deleted.
+        '400':
+          description: The roster ID is invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authorization.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: The roster does not exist or does not belong to the signed-in user.
           content:
             application/json:
               schema:
@@ -182,7 +361,7 @@ components:
       properties:
         token:
           type: string
-          description: Your backend's session token (like a JWT) for this user.
+          description: The backend's session token for this user.
           example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
         user:
           type: object
@@ -195,7 +374,58 @@ components:
               example: "octocat"
             avatar_url:
               type: string
+              format: uri
               example: "https://avatars.githubusercontent.com/u/583231?v=4"
+
+    UserNewRosterData:
+      type: object
+      required:
+        - rosterId
+        - userId
+        - members
+      properties:
+        rosterId:
+          type: string
+          format: uuid
+          description: Unique ID of the roster.
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        userId:
+          type: string
+          format: uuid
+          description: ID of the user who owns the roster.
+          example: "c56a4180-65aa-42ec-a945-5fd21dec0538"
+        members:
+          type: array
+          description: Guardians belonging to this roster.
+          items:
+            type: object
+
+    UserRosterData:
+      type: array
+      items:
+        $ref: '#/components/schemas/UserNewRosterData'
+
+    CreateRosterRequest:
+      type: object
+      required:
+        - members
+      properties:
+        members:
+          type: array
+          description: Guardians to include in the roster.
+          items:
+            type: object
+
+    UserRosterUpdateData:
+      type: object
+      required:
+        - members
+      properties:
+        members:
+          type: array
+          description: Replaces the roster's current members with this list.
+          items:
+            type: object
 
     ErrorResponse:
       type: object
