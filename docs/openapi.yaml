@@ -3,15 +3,19 @@ info:
   title: DoodleDungeon API
   description: Backend API for the DoodleDungeon Android app
   version: 1.0.0
+  license:
+    name: No license specified
 servers:
-  - url: http://localhost:8080/api
-    description: Local development server
+  - url: /api
+    description: API base path relative to the server hosting this document
 
 paths:
   /auth/github:
     post:
+      operationId: authenticateWithGitHub
       summary: Authenticate with GitHub
       description: Exchanges a GitHub authorization code for an app session token (JWT).
+      security: []
       tags:
         - Authentication
       requestBody:
@@ -42,6 +46,7 @@ paths:
 
   /user/rosters:
     get:
+      operationId: listUserRosters
       summary: retrieve users rosters
       description: returns all of a users owned rosters/teams so they can interact with them
       tags:
@@ -68,6 +73,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
     post:
+      operationId: createUserRoster
       summary: create a new roster
       description: Creates a new roster owned by the current user and populated with their choices
       tags:
@@ -109,6 +115,7 @@ paths:
           type: string
           format: uuid
     put:
+      operationId: replaceUserRoster
       summary: replaces a user roster
       description: replace a user roster with a new one using as defined by the user
       tags:
@@ -147,6 +154,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
     patch:
+      operationId: updateUserRosterMembers
       summary: Change units
       description: Alter the members of a users roster
       tags:
@@ -185,6 +193,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
     delete:
+      operationId: deleteUserRoster
       summary: Removes Roster
       description: Remove a roster entirely
       tags:

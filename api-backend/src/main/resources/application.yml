@@ -1,0 +1,8 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/doodledungeon}
+    username: ${SPRING_DATASOURCE_USERNAME:app}
+    password: ${SPRING_DATASOURCE_PASSWORD:app}
+  flyway:
+    # Apply V2 to databases created from the old SQL file before they started tracking Flyway versions.
+    baseline-on-migrate: true

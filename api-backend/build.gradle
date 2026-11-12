@@ -23,6 +23,12 @@ dependencies {
     implementation platform('org.springframework.boot:spring-boot-dependencies:4.1.2')
     // Spring MVC provides the REST controller and JSON request/response support.
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+    implementation 'org.flywaydb:flyway-core'
+    // The migration integration test calls Flyway directly, so keep it explicit on the test classpath too.
+    testImplementation 'org.flywaydb:flyway-core'
+    runtimeOnly 'org.flywaydb:flyway-database-postgresql'
+    runtimeOnly 'org.postgresql:postgresql'
 
     // The test starters provide JUnit/Mockito and Spring's MockMvc controller test support.
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
