@@ -31,6 +31,35 @@ Open [localhost:8081](http://localhost:8081). Changes to `App.tsx` refresh the
 screen. Press Ctrl+C to stop the server. On macOS/Linux use `npm` instead of
 `npm.cmd`.
 
+## Guardian creation demo
+
+Run `npm.cmd run web` from `app-frontend/`, open http://localhost:8081, and
+select **Try guardian creation**. No sign-in or backend is needed for this demo.
+
+Enter a name, choose Warrior/Brawler/Ranger/Mage, draw in the white art area,
+and select **Create guardian**. Color, Undo, and Clear art work like the card
+editor in CardBattle. The completed card shows the name, artwork, and class.
+**Create another guardian** starts an empty draft. The demo keeps data only while
+this screen is open; leaving it or refreshing discards the guardian.
+
+Edit TypeScript/TSX files in IntelliJ or VS Code. Use the editor's terminal at
+`app-frontend/` to run the app; saving a file refreshes the browser. The relevant
+files are:
+
+- `src/guardians/CreateGuardianScreen.tsx`: the form and completed card.
+- `src/guardians/GuardianDrawing.tsx`: mouse/touch drawing and artwork rendering.
+- `src/guardians/guardian.ts`: guardian data and validation.
+- `App.tsx`: the button that opens the demo.
+
+Run `npm.cmd test -- --runInBand` and `npm.cmd run typecheck` before committing.
+For a quick manual check, verify that blank fields are rejected, all four classes
+can be selected, Undo/Clear change the drawing, and the completed card matches
+what you entered. Existing login tests remain part of the test suite.
+
+For Android, use `npm.cmd run android` with an emulator/device. Rebuild an existing
+development client after installing the new `react-native-svg` dependency.
+Android Studio supplies SDK/emulator tools; it is not required for browser testing.
+
 ## GitHub configuration
 
 The client exchanges the authorization code with the backend and displays the
@@ -98,6 +127,6 @@ and publishes the image to GHCR on pushes to `main`.
 
 ## Current scope
 
-The client contains the GitHub authorization button and callback-code screen.
-Backend token exchange, PKCE, Google sign-in, and game features are not yet
-implemented. The API/Postgres stack and automated test suites remain to build.
+The frontend contains GitHub/Google sign-in UI and a local guardian creation
+demo. The backend is a placeholder in this checkout. The guardian demo does not
+write to an API or database.

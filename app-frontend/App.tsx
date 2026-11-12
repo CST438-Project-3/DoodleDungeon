@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Button, Platform, StyleSheet, Text, View } from 'react-native';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
+import CreateGuardianScreen from './src/guardians/CreateGuardianScreen';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -55,6 +56,7 @@ export default function App() {
   const [authProvider, setAuthProvider] = useState<AuthProvider | null>(null);
   const [session, setSession] = useState<AuthResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showGuardianDemo, setShowGuardianDemo] = useState(false);
 
   // GitHub Auth Request
   const githubClientId = (Platform.OS === 'web'
@@ -119,6 +121,10 @@ export default function App() {
     }
   }, [googleResponse]);
 
+  if (showGuardianDemo) {
+    return <CreateGuardianScreen onClose={() => setShowGuardianDemo(false)} />;
+  }
+
   return (
     <View style={styles.container}>
       {authCode === null ? (
@@ -149,6 +155,8 @@ export default function App() {
         </>
       )}
       {error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
+      <View style={styles.spacer} />
+      <Button title="Try guardian creation" onPress={() => setShowGuardianDemo(true)} />
     </View>
   );
 }
