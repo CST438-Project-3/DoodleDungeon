@@ -9,6 +9,11 @@ servers:
   - url: /api
     description: API base path relative to the server hosting this document
 
+tags:
+  - name: Authentication
+  - name: Users
+  - name: Rosters
+
 paths:
   /auth/github:
     post:
@@ -32,13 +37,45 @@ paths:
               schema:
                 $ref: '#/components/schemas/AuthResponse'
         '400':
-          description: Bad request (e.g., missing code).
+          description: Bad request, such as a missing authorization code.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '401':
-          description: Unauthorized (e.g., invalid or expired GitHub code).
+          description: Unauthorized, such as an invalid or expired GitHub code.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/google:
+    post:
+      summary: Authenticate with Google
+      description: Exchanges a Google authorization code and PKCE verifier for an app session token (JWT).
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoogleLoginRequest'
+      responses:
+        '200':
+          description: Successfully authenticated. Returns a session token and user info.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Bad request, such as a missing code or PKCE verifier.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized, such as an invalid or expired Google code.
           content:
             application/json:
               schema:
@@ -47,37 +84,38 @@ paths:
   /user/rosters:
     get:
       operationId: listUserRosters
-      summary: retrieve users rosters
-      description: returns all of a users owned rosters/teams so they can interact with them
+      summary: List the signed-in user's rosters
+      description: Returns the rosters owned by the signed-in user.
       tags:
-        - User Functionality
+        - Rosters
       security:
         - bearerAuth: []
       responses:
         '200':
-          description: Request success. Returns Users Roster Data.
+          description: The user's rosters.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserRosterData'
         '400':
-          description: Bad Request (e.g. missing code, timed out gateway request)
+          description: The request was invalid.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '401':
-          description: Missing or Invalid Authorization
+          description: Missing or invalid authorization.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+
     post:
       operationId: createUserRoster
-      summary: create a new roster
-      description: Creates a new roster owned by the current user and populated with their choices
+      summary: Create a roster
+      description: Creates a roster owned by the signed-in user with the selected members.
       tags:
-        - User Functionality
+        - Rosters
       security:
         - bearerAuth: []
       requestBody:
@@ -88,19 +126,19 @@ paths:
               $ref: '#/components/schemas/CreateRosterRequest'
       responses:
         '201':
-          description: Request Success. Roster Added To Database.
+          description: The roster was created.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserNewRosterData'
         '400':
-          description: Bad Request (e.g. invalid member selection)
+          description: The request contains an invalid member selection.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '401':
-          description: Missing or Invalid Authorization
+          description: Missing or invalid authorization.
           content:
             application/json:
               schema:
@@ -114,12 +152,13 @@ paths:
         schema:
           type: string
           format: uuid
+
     put:
       operationId: replaceUserRoster
-      summary: replaces a user roster
-      description: replace a user roster with a new one using as defined by the user
+      summary: Replace a roster
+      description: Replaces a roster's members with the user's selected members.
       tags:
-        - User Functionality
+        - Rosters
       security:
         - bearerAuth: []
       requestBody:
@@ -130,35 +169,36 @@ paths:
               $ref: '#/components/schemas/CreateRosterRequest'
       responses:
         '200':
-          description: Request Success. Roster Replaced Successfully.
+          description: The roster was replaced.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserNewRosterData'
         '400':
-          description: Bad Request (e.g. invalid member selection)
+          description: The request contains an invalid member selection.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '401':
-          description: Missing or Invalid Authorization
+          description: Missing or invalid authorization.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '404':
-          description: Roster Doesn't Exist or Doesn't Belong To You
+          description: The roster does not exist or does not belong to the signed-in user.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+
     patch:
       operationId: updateUserRosterMembers
-      summary: Change units
-      description: Alter the members of a users roster
+      summary: Change a roster's members
+      description: Replaces the members in the signed-in user's roster.
       tags:
-        - User Functionality
+        - Rosters
       security:
         - bearerAuth: []
       requestBody:
@@ -169,67 +209,128 @@ paths:
               $ref: '#/components/schemas/UserRosterUpdateData'
       responses:
         '200':
-          description: Request Success. Roster Updated Successfully
+          description: The roster members were updated.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserNewRosterData'
         '400':
-          description: Bad Request (e.g. invalid member selection)
+          description: The request contains an invalid member selection.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '401':
-          description: Missing or Invalid Authorization
+          description: Missing or invalid authorization.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '404':
-          description: Roster Doesn't Exist or Doesn't Belong To You
+          description: The roster does not exist or does not belong to the signed-in user.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+
     delete:
       operationId: deleteUserRoster
-      summary: Removes Roster
-      description: Remove a roster entirely
+      summary: Delete a roster
+      description: Deletes a roster owned by the signed-in user.
       tags:
-        - User Functionality
+        - Rosters
       security:
         - bearerAuth: []
       responses:
         '204':
-          description: Request Success. Roster Deleted Successfully
+          description: The roster was deleted.
         '400':
-          description: Bad Request (e.g. invalid roster ID format)
+          description: The roster ID is invalid.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '401':
-          description: Missing or Invalid Authorization
+          description: Missing or invalid authorization.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '404':
-          description: Roster Doesn't Exist or Doesn't Belong To You
+          description: The roster does not exist or does not belong to the signed-in user.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /users/me:
+    get:
+      tags:
+        - Users
+      summary: Get the signed-in user's profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The signed-in user's profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          description: Sign-in is required.
+        '404':
+          description: The user's profile was not found.
+
+    patch:
+      tags:
+        - Users
+      summary: Update the signed-in user's profile
+      description: Updates the user's display name.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserProfileRequest'
+      responses:
+        '200':
+          description: The updated profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '400':
+          description: The display name is missing or blank.
+        '401':
+          description: Sign-in is required.
+        '404':
+          description: The user's profile was not found.
+
+    delete:
+      tags:
+        - Users
+      summary: Delete the signed-in user's account
+      description: Deletes the user's account and related data. The client clears its local session after success.
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: The account was deleted.
+        '401':
+          description: Sign-in is required.
+        '404':
+          description: The user's profile was not found.
 
 components:
-  # Adding a new schema for defining Bearer Auth
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+      description: JWT whose subject identifies the signed-in app user.
 
   schemas:
     GitHubLoginRequest:
@@ -242,6 +343,24 @@ components:
           description: The temporary authorization code received from GitHub's redirect.
           example: "abcdef1234567890"
 
+    GoogleLoginRequest:
+      type: object
+      required:
+        - code
+        - redirectUri
+        - codeVerifier
+      properties:
+        code:
+          type: string
+          description: The temporary authorization code received from Google's redirect.
+        redirectUri:
+          type: string
+          format: uri
+          description: The redirect URI used to obtain the authorization code.
+        codeVerifier:
+          type: string
+          description: The PKCE verifier paired with the authorization request.
+
     AuthResponse:
       type: object
       required:
@@ -250,7 +369,7 @@ components:
       properties:
         token:
           type: string
-          description: Your backend's session token (like a JWT) for this user.
+          description: The backend's session token for this user.
           example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
         user:
           type: object
@@ -263,12 +382,12 @@ components:
               example: "octocat"
             avatar_url:
               type: string
+              format: uri
               example: "https://avatars.githubusercontent.com/u/583231?v=4"
 
     UserNewRosterData:
       type: object
       required:
-        # The baseline for this schema to have in the DB
         - rosterId
         - userId
         - members
@@ -276,63 +395,33 @@ components:
         rosterId:
           type: string
           format: uuid
-          description: Unique ID of the roster
+          description: Unique ID of the roster.
           example: "550e8400-e29b-41d4-a716-446655440000"
         userId:
           type: string
           format: uuid
-          description: The ID of the user this roster belongs to
+          description: ID of the user who owns the roster.
           example: "c56a4180-65aa-42ec-a945-5fd21dec0538"
         members:
-          # Needs to be a multi-object type, so an array or list is fine I hope
           type: array
           description: Guardians belonging to this roster.
           items:
-            # Guardian object fields remain unspecified in this contract.
             type: object
 
-    # Just grabs all existing arrays, or an empty list if none
     UserRosterData:
       type: array
       items:
-        # Copy pasted these, for speed and because they're the same
-        type: object
-        required:
-          # The baseline for this schema to have in the DB
-          - rosterId
-          - userId
-          - members
-        properties:
-          rosterId:
-            type: string
-            format: uuid
-            description: Unique ID of the roster
-            example: "550e8400-e29b-41d4-a716-446655440000"
-          userId:
-            type: string
-            format: uuid
-            description: The ID of the user this roster belongs to
-            example: "c56a4180-65aa-42ec-a945-5fd21dec0538"
-          members:
-            # Needs to be a multi-object type, so an array or list is fine I hope
-            type: array
-            description: Guardians belonging to this roster.
-            items:
-              # Guardian object fields remain unspecified in this contract.
-              type: object
+        $ref: '#/components/schemas/UserNewRosterData'
 
     CreateRosterRequest:
       type: object
       required:
-        # The baseline for this schema to have in the DB
         - members
       properties:
         members:
-          # Needs to be a multi-object type, so an array or list is fine I hope
           type: array
-          description: Guardians to include in this roster.
+          description: Guardians to include in the roster.
           items:
-            # Guardian object fields remain unspecified in this contract.
             type: object
 
     UserRosterUpdateData:
@@ -344,9 +433,7 @@ components:
           type: array
           description: Replaces the roster's current members with this list.
           items:
-            # Guardian object fields remain unspecified in this contract.
             type: object
-
 
     ErrorResponse:
       type: object
@@ -360,3 +447,33 @@ components:
         message:
           type: string
           example: "The provided authorization code is invalid or has expired."
+
+    UserProfile:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+          nullable: true
+        displayName:
+          type: string
+          nullable: true
+        avatarUrl:
+          type: string
+          format: uri
+          nullable: true
+
+    UpdateUserProfileRequest:
+      type: object
+      required:
+        - displayName
+      properties:
+        displayName:
+          type: string
+          minLength: 1
+          description: The profile name to display in the app.
