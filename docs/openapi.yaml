@@ -3,16 +3,17 @@ info:
   title: DoodleDungeon API
   description: Backend API for the DoodleDungeon Android app
   version: 1.0.0
-  license:
-    name: No license specified
 servers:
   - url: /api
     description: API base path relative to the server hosting this document
 
 tags:
   - name: Authentication
+    description: Sign in with a supported identity provider.
   - name: Users
+    description: View and update the signed-in user's profile.
   - name: Rosters
+    description: Manage the signed-in user's rosters.
 
 paths:
   /auth/github:
@@ -51,8 +52,10 @@ paths:
 
   /auth/google:
     post:
+      operationId: authenticateWithGoogle
       summary: Authenticate with Google
       description: Exchanges a Google authorization code and PKCE verifier for an app session token (JWT).
+      security: []
       tags:
         - Authentication
       requestBody:
@@ -265,6 +268,7 @@ paths:
 
   /users/me:
     get:
+      operationId: getCurrentUserProfile
       tags:
         - Users
       summary: Get the signed-in user's profile
@@ -283,6 +287,7 @@ paths:
           description: The user's profile was not found.
 
     patch:
+      operationId: updateCurrentUserProfile
       tags:
         - Users
       summary: Update the signed-in user's profile
@@ -310,6 +315,7 @@ paths:
           description: The user's profile was not found.
 
     delete:
+      operationId: deleteCurrentUserAccount
       tags:
         - Users
       summary: Delete the signed-in user's account
