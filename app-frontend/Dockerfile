@@ -4,7 +4,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY . .
-RUN npm run typecheck && npm run export:web
+RUN npm run test -- --runInBand && npm run typecheck && npm run export:web
 
 FROM busybox:stable AS checks
 COPY --from=build /app/dist /web
