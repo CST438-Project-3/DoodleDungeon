@@ -1,0 +1,34 @@
+plugins {
+    id 'java'
+    // Adds Spring Boot run/package tasks and version-aware application conventions.
+    id 'org.springframework.boot' version '4.1.2'
+}
+
+group = 'com.cst438.doodledungeon'
+version = '0.1.0-SNAPSHOT'
+
+java {
+    toolchain {
+        // Use the project's JDK without changing the machine's JAVA_HOME or PATH.
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Spring's dependency BOM keeps the Spring module versions compatible with the Boot plugin.
+    implementation platform('org.springframework.boot:spring-boot-dependencies:4.1.2')
+    // Spring MVC provides the REST controller and JSON request/response support.
+    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+
+    // The test starters provide JUnit/Mockito and Spring's MockMvc controller test support.
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
