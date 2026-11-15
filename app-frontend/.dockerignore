@@ -7,10 +7,14 @@ ios
 .git
 .env
 .env.*
+env
+env.*
 !.env.example
 *.log
 **/.env
 **/.env.*
+**/env
+**/env.*
 **/secrets/
 **/secret/
 **/*.pem

@@ -13,6 +13,8 @@ app-frontend/ios
 *.iml
 **/.env
 **/.env.*
+**/env
+**/env.*
 **/secrets/
 **/secret/
 **/*.pem

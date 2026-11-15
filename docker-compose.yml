@@ -2,10 +2,29 @@ services:
   backend-tests:
     image: gradle:8.14.4-jdk21
     working_dir: /workspace
+    environment:
+      TEST_DATABASE_URL: jdbc:postgresql://db:5432/doodledungeon_test
+      TEST_DATABASE_USERNAME: app
+      TEST_DATABASE_PASSWORD: app
     volumes:
       - ./api-backend:/workspace
       - backend-gradle-cache:/home/gradle/.gradle
     command: ["gradle", "--no-daemon", "test"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: doodledungeon_test
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d doodledungeon_test"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   frontend-checks:
     image: ghcr.io/cst438-project-3/doodledungeon:latest
