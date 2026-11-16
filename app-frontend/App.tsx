@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Button, Platform, StyleSheet, Text, View } from 'react-native';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
+import { clearSession, loadSession, saveSession } from './sessionStorage';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -29,18 +30,44 @@ type AuthResponse = {
   };
 };
 
-const apiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:8080/api';
+const configuredApiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
+const apiBaseUrl = Platform.OS === 'android' && configuredApiBaseUrl === 'http://localhost:8080/api'
+  ? 'http://10.0.2.2:8080/api'
+  : configuredApiBaseUrl || 'http://localhost:8080/api';
+
+type StoredSession = {
+  auth: AuthResponse;
+  provider: AuthProvider;
+};
+
+function isSessionInvalidOrExpired(token: string): boolean {
+  const parts = token.split('.');
+  if (parts.length !== 3) {
+    return true;
+  }
+
+  try {
+    const encodedPayload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const payload = JSON.parse(globalThis.atob(encodedPayload.padEnd(Math.ceil(encodedPayload.length / 4) * 4, '='))) as {
+      exp?: number;
+    };
+    return typeof payload.exp === 'number' && payload.exp <= Math.floor(Date.now() / 1000);
+  } catch {
+    return true;
+  }
+}
 
 async function exchangeCode(
   provider: AuthProvider,
   code: string,
   redirectUri: string,
+  clientId: string,
   codeVerifier?: string,
 ): Promise<AuthResponse> {
   const response = await fetch(`${apiBaseUrl}/auth/${provider.toLowerCase()}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code, redirectUri, codeVerifier }),
+    body: JSON.stringify({ code, redirectUri, clientId, codeVerifier }),
   });
 
   if (!response.ok) {
@@ -51,15 +78,41 @@ async function exchangeCode(
 }
 
 export default function App() {
-  const [authCode, setAuthCode] = useState<string | null>(null);
   const [authProvider, setAuthProvider] = useState<AuthProvider | null>(null);
   const [session, setSession] = useState<AuthResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isLoadingSession, setIsLoadingSession] = useState(true);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  useEffect(() => {
+    void loadSession()
+      .then((storedSession) => {
+        if (!storedSession) {
+          return;
+        }
+
+        const restoredSession = JSON.parse(storedSession) as StoredSession;
+        if (!restoredSession.auth?.token || !restoredSession.auth.user
+          || isSessionInvalidOrExpired(restoredSession.auth.token)) {
+          return clearSession();
+        }
+
+        setSession(restoredSession.auth);
+        setAuthProvider(restoredSession.provider);
+      })
+      .catch(() => {
+        void clearSession();
+        setError('Unable to restore your session. Please sign in again.');
+      })
+      .finally(() => setIsLoadingSession(false));
+  }, []);
 
   // GitHub Auth Request
   const githubClientId = (Platform.OS === 'web'
     ? process.env.EXPO_PUBLIC_GITHUB_WEB_CLIENT_ID
-    : process.env.EXPO_PUBLIC_GITHUB_ANDROID_CLIENT_ID) || defaultGithubClientId;
+    : process.env.EXPO_PUBLIC_GITHUB_ANDROID_CLIENT_ID) || (Platform.OS === 'web'
+      ? defaultGithubClientId
+      : '');
 
   const githubRedirectUri = Platform.OS === 'web'
     ? process.env.EXPO_PUBLIC_GITHUB_WEB_REDIRECT_URI || AuthSession.makeRedirectUri()
@@ -92,11 +145,13 @@ export default function App() {
   // Handle GitHub Response
   useEffect(() => {
     if (githubResponse?.type === 'success' && githubResponse.params.code) {
-      void exchangeCode('GitHub', githubResponse.params.code, githubRedirectUri, githubRequest?.codeVerifier)
+      void exchangeCode('GitHub', githubResponse.params.code, githubRedirectUri, githubClientId, githubRequest?.codeVerifier)
         .then((authResponse) => {
-          setAuthCode(githubResponse.params.code);
-          setAuthProvider('GitHub');
-          setSession(authResponse);
+          const storedSession: StoredSession = { auth: authResponse, provider: 'GitHub' };
+          return saveSession(JSON.stringify(storedSession)).then(() => {
+            setAuthProvider('GitHub');
+            setSession(authResponse);
+          });
         })
         .catch(() => setError('GitHub sign-in failed. Please try again.'));
     } else if (githubResponse?.type === 'error') {
@@ -107,11 +162,13 @@ export default function App() {
   // Handle Google Response
   useEffect(() => {
     if (googleResponse?.type === 'success' && googleResponse.params.code) {
-      void exchangeCode('Google', googleResponse.params.code, googleRedirectUri, googleRequest?.codeVerifier)
+      void exchangeCode('Google', googleResponse.params.code, googleRedirectUri, googleClientId, googleRequest?.codeVerifier)
         .then((authResponse) => {
-          setAuthCode(googleResponse.params.code);
-          setAuthProvider('Google');
-          setSession(authResponse);
+          const storedSession: StoredSession = { auth: authResponse, provider: 'Google' };
+          return saveSession(JSON.stringify(storedSession)).then(() => {
+            setAuthProvider('Google');
+            setSession(authResponse);
+          });
         })
         .catch(() => setError('Google sign-in failed. Please try again.'));
     } else if (googleResponse?.type === 'error') {
@@ -119,9 +176,27 @@ export default function App() {
     }
   }, [googleResponse]);
 
+  const logout = async () => {
+    setIsLoggingOut(true);
+    setError(null);
+    try {
+      await clearSession();
+      setSession(null);
+      setAuthProvider(null);
+    } catch {
+      setError('Unable to log out completely. Please try again.');
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
+  if (isLoadingSession) {
+    return <View style={styles.container}><Text>Loading session...</Text></View>;
+  }
+
   return (
     <View style={styles.container}>
-      {authCode === null ? (
+      {!session ? (
         <>
           <Button title="Login with GitHub" disabled={!githubRequest} onPress={() => {
             setError(null);
@@ -140,12 +215,7 @@ export default function App() {
           <View style={styles.spacer} />
           <Text>Your session is ready.</Text>
           <View style={styles.spacer} />
-          <Button title="Reset Login" onPress={() => {
-            setAuthCode(null);
-            setAuthProvider(null);
-            setSession(null);
-            setError(null);
-          }} />
+          <Button title="Log out" disabled={isLoggingOut} onPress={() => void logout()} />
         </>
       )}
       {error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
