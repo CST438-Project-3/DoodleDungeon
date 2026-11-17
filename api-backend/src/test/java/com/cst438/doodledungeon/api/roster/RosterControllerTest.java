@@ -22,13 +22,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 // Load the MVC controller slice only; MockMvc sends requests without starting a network server.
-@WebMvcTest(RosterController.class)
+@WebMvcTest(value = RosterController.class, properties = "features.rosters=true")
+@AutoConfigureMockMvc(addFilters = false)
 class RosterControllerTest {
 
     private static final UUID USER_ID = UUID.fromString("c56a4180-65aa-42ec-a945-5fd21dec0538");
@@ -65,7 +67,7 @@ class RosterControllerTest {
 
     @Test
     void invalidAuthenticatedUserIdReturnsUnauthorized() throws Exception {
-        // MockMvc lets the test attach a Principal directly; real JWT authentication is a future TODO.
+        // Check the controller's UUID validation with an invalid principal.
         mockMvc.perform(get("/api/user/rosters").principal(() -> "not-a-uuid"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("unauthorized"));
