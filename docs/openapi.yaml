@@ -77,22 +77,30 @@ components:
       type: object
       required:
         - code
+        - clientId
       properties:
         code:
           type: string
           description: The temporary authorization code received from GitHub's redirect.
           example: "abcdef1234567890"
+        clientId:
+          type: string
+          description: The public OAuth client ID used by the client.
 
     GoogleLoginRequest:
       type: object
       required:
         - code
+        - clientId
         - redirectUri
         - codeVerifier
       properties:
         code:
           type: string
           description: The temporary authorization code received from Google's redirect.
+        clientId:
+          type: string
+          description: The public OAuth client ID used by the client.
         redirectUri:
           type: string
           format: uri

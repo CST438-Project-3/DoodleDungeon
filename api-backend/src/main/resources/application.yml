@@ -1,0 +1,21 @@
+server:
+  port: ${PORT:8080}
+  servlet:
+    context-path: /api
+
+oauth:
+  github:
+    client-id: ${GITHUB_CLIENT_ID:}
+    client-secret: ${GITHUB_CLIENT_SECRET:}
+    android-client-id: ${GITHUB_ANDROID_CLIENT_ID:}
+    android-client-secret: ${GITHUB_ANDROID_CLIENT_SECRET:}
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:}
+    client-secret: ${GOOGLE_CLIENT_SECRET:}
+    android-client-id: ${GOOGLE_ANDROID_CLIENT_ID:}
+    android-client-secret: ${GOOGLE_ANDROID_CLIENT_SECRET:}
+  allowed-redirect-uris: ${OAUTH_ALLOWED_REDIRECT_URIS:http://localhost:8081,doodledungeon://login}
+
+app:
+  jwt-secret: ${APP_JWT_SECRET:replace-this-local-development-secret-with-at-least-32-characters}
+  jwt-ttl-seconds: ${APP_JWT_TTL_SECONDS:3600}
