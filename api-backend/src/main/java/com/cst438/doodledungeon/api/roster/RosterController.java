@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 /** Maps roster HTTP requests to the service; Spring serializes returned records as JSON. */
+@ConditionalOnProperty(name = "features.rosters", havingValue = "true")
 @RestController
 @RequestMapping("/api/user/rosters")
 public class RosterController {
@@ -78,8 +80,6 @@ public class RosterController {
         return ResponseEntity.noContent().build();
     }
 
-    // TODO: Configure Spring Security to validate bearer tokens and put the user's UUID in Principal.
-    // This check validates the principal value's format; it does not validate a token by itself.
     private UUID userId(Principal principal) {
         if (principal == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing or invalid authorization");

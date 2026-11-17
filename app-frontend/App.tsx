@@ -1,13 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Button, Platform, StyleSheet, Text, View } from 'react-native';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
-import CreateGuardianScreen from './src/guardians/CreateGuardianScreen';
-import RostersScreen from './src/rosters/RostersScreen';
+import { clearSession, loadSession, saveSession } from './sessionStorage';
+import HomeScreen from './src/HomeScreen';
+import { apiRequest, ApiError } from './src/api';
 
 WebBrowser.maybeCompleteAuthSession();
 
-const defaultGithubClientId = 'Ov23lialuEK23i2nVmLy';
 const github = {
   authorizationEndpoint: 'https://github.com/login/oauth/authorize',
   tokenEndpoint: 'https://github.com/login/oauth/access_token',
@@ -24,46 +24,89 @@ type AuthProvider = 'GitHub' | 'Google';
 type AuthResponse = {
   token: string;
   user: {
-    id: string | number;
+    id: string;
     email?: string;
     display_name?: string;
     avatar_url?: string;
   };
 };
 
-const apiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:8080/api';
+type StoredSession = {
+  auth: AuthResponse;
+  provider: AuthProvider;
+};
 
-async function exchangeCode(
-  provider: AuthProvider,
-  code: string,
-  redirectUri: string,
-  codeVerifier?: string,
-): Promise<AuthResponse> {
-  const response = await fetch(`${apiBaseUrl}/auth/${provider.toLowerCase()}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code, redirectUri, codeVerifier }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Authentication failed (${response.status})`);
+function isSessionInvalidOrExpired(token: string): boolean {
+  const parts = token.split('.');
+  if (parts.length !== 3) {
+    return true;
   }
 
-  return response.json() as Promise<AuthResponse>;
+  try {
+    const encodedPayload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const payload = JSON.parse(globalThis.atob(encodedPayload.padEnd(Math.ceil(encodedPayload.length / 4) * 4, '='))) as {
+      exp?: number;
+    };
+    return typeof payload.exp !== 'number' || payload.exp <= Math.floor(Date.now() / 1000);
+  } catch {
+    return true;
+  }
+}
+
+async function exchangeCode(
+  provider: AuthProvider, code: string, redirectUri: string, clientId: string, codeVerifier?: string,
+): Promise<AuthResponse> {
+  return apiRequest<AuthResponse>(`/auth/${provider.toLowerCase()}`, undefined,
+    { code, redirectUri, clientId, codeVerifier });
 }
 
 export default function App() {
-  const [authCode, setAuthCode] = useState<string | null>(null);
-  const [authProvider, setAuthProvider] = useState<AuthProvider | null>(null);
   const [session, setSession] = useState<AuthResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [showGuardianDemo, setShowGuardianDemo] = useState(false);
-  const [showRosters, setShowRosters] = useState(false);
+  const [isLoadingSession, setIsLoadingSession] = useState(true);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isSigningIn, setIsSigningIn] = useState(false);
 
-  // GitHub Auth Request
+  const sessionExpired = useCallback(() => {
+    setSession(null);
+    void clearSession().catch(() => {});
+    setError('Your session has expired. Please sign in again.');
+  }, []);
+
+  useEffect(() => {
+    void loadSession()
+      .then(async (storedSession) => {
+        if (!storedSession) {
+          return;
+        }
+
+        const restoredSession = JSON.parse(storedSession) as StoredSession;
+        if (!restoredSession.auth?.token || !restoredSession.auth.user
+          || isSessionInvalidOrExpired(restoredSession.auth.token)) {
+          return clearSession();
+        }
+
+        try {
+          await apiRequest('/users/me', restoredSession.auth.token);
+        } catch (problem) {
+          if (problem instanceof ApiError && problem.status === 401) {
+            await clearSession();
+            return;
+          }
+          throw problem;
+        }
+        setSession(restoredSession.auth);
+      })
+      .catch(() => {
+        void clearSession().catch(() => {});
+        setError('Unable to restore your session. Please sign in again.');
+      })
+      .finally(() => setIsLoadingSession(false));
+  }, []);
+
   const githubClientId = (Platform.OS === 'web'
     ? process.env.EXPO_PUBLIC_GITHUB_WEB_CLIENT_ID
-    : process.env.EXPO_PUBLIC_GITHUB_ANDROID_CLIENT_ID) || defaultGithubClientId;
+    : process.env.EXPO_PUBLIC_GITHUB_ANDROID_CLIENT_ID) || '';
 
   const githubRedirectUri = Platform.OS === 'web'
     ? process.env.EXPO_PUBLIC_GITHUB_WEB_REDIRECT_URI || AuthSession.makeRedirectUri()
@@ -76,7 +119,6 @@ export default function App() {
     usePKCE: false,
   }, github);
 
-  // Google Auth Request
   const googleClientId = (Platform.OS === 'web'
     ? process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID
     : process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID)?.trim() || '';
@@ -93,90 +135,90 @@ export default function App() {
     usePKCE: true,
   }, google);
 
-  // Handle GitHub Response
   useEffect(() => {
     if (githubResponse?.type === 'success' && githubResponse.params.code) {
-      void exchangeCode('GitHub', githubResponse.params.code, githubRedirectUri, githubRequest?.codeVerifier)
+      setIsSigningIn(true);
+      void exchangeCode('GitHub', githubResponse.params.code, githubRedirectUri, githubClientId, githubRequest?.codeVerifier)
         .then((authResponse) => {
-          setAuthCode(githubResponse.params.code);
-          setAuthProvider('GitHub');
-          setSession(authResponse);
+          const storedSession: StoredSession = { auth: authResponse, provider: 'GitHub' };
+          return saveSession(JSON.stringify(storedSession)).then(() => {
+            setSession(authResponse);
+          });
         })
-        .catch(() => setError('GitHub sign-in failed. Please try again.'));
+        .catch(() => setError('GitHub sign-in failed. Check the API and OAuth settings, then try again.'))
+        .finally(() => setIsSigningIn(false));
     } else if (githubResponse?.type === 'error') {
       setError('GitHub login did not complete. Please try again.');
     }
   }, [githubResponse]);
 
-  // Handle Google Response
   useEffect(() => {
     if (googleResponse?.type === 'success' && googleResponse.params.code) {
-      void exchangeCode('Google', googleResponse.params.code, googleRedirectUri, googleRequest?.codeVerifier)
+      setIsSigningIn(true);
+      void exchangeCode('Google', googleResponse.params.code, googleRedirectUri, googleClientId, googleRequest?.codeVerifier)
         .then((authResponse) => {
-          setAuthCode(googleResponse.params.code);
-          setAuthProvider('Google');
-          setSession(authResponse);
+          const storedSession: StoredSession = { auth: authResponse, provider: 'Google' };
+          return saveSession(JSON.stringify(storedSession)).then(() => {
+            setSession(authResponse);
+          });
         })
-        .catch(() => setError('Google sign-in failed. Please try again.'));
+        .catch(() => setError('Google sign-in failed. Check the API and OAuth settings, then try again.'))
+        .finally(() => setIsSigningIn(false));
     } else if (googleResponse?.type === 'error') {
       setError('Google login did not complete. Please try again.');
     }
   }, [googleResponse]);
 
-  if (showRosters) {
-    return <RostersScreen token={session?.token ?? null} onClose={() => setShowRosters(false)} />;
+  const logout = async () => {
+    setIsLoggingOut(true);
+    setError(null);
+    try {
+      await clearSession();
+      setSession(null);
+    } catch {
+      setSession(null);
+      setError('Logged out, but saved credentials could not be removed. Clear the app storage.');
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
+  if (isLoadingSession) {
+    return <View style={styles.container}><Text>Loading session...</Text></View>;
   }
 
-  if (showGuardianDemo) {
-    return <CreateGuardianScreen onClose={() => setShowGuardianDemo(false)} />;
-  }
+  if (session) return <HomeScreen token={session.token}
+    displayName={session.user.display_name || session.user.email || 'player'}
+    onLogout={() => void logout()} onSessionExpired={sessionExpired} />;
 
   return (
     <View style={styles.container}>
-      {authCode === null ? (
-        <>
-          <Button title="Login with GitHub" disabled={!githubRequest} onPress={() => {
-            setError(null);
-            void githubPromptAsync().catch(() => setError('Unable to open GitHub login.'));
-          }} />
-          <View style={styles.spacer} />
-          <Button title="Login with Google" disabled={!googleRequest} onPress={() => {
-            setError(null);
-            // An AuthRequest can exist even with an empty ID. Catch missing configuration
-            // here instead of sending the user to Google's "missing client_id" error page.
-            if (!googleClientId) {
-              setError('Google sign-in is not configured for this platform yet.');
-              return;
-            }
-            void googlePromptAsync().catch(() => setError('Unable to open Google login.'));
-          }} />
-        </>
-      ) : (
-        <>
-          <Text>Signed in with {authProvider}.</Text>
-          <Text>Welcome, {session?.user.display_name || session?.user.email || 'player'}!</Text>
-          <View style={styles.spacer} />
-          <Text>Your session is ready.</Text>
-          <View style={styles.spacer} />
-          <Button title="Reset Login" onPress={() => {
-            setAuthCode(null);
-            setAuthProvider(null);
-            setSession(null);
-            setError(null);
-          }} />
-        </>
-      )}
+      <Text accessibilityRole="header" style={styles.title}>DoodleDungeon</Text>
+      <Text style={styles.subtitle}>Sign in to build your guardian collection.</Text>
+      <Button title="Login with GitHub" disabled={!githubRequest || !githubClientId || isSigningIn || isLoggingOut} onPress={() => {
+        setError(null);
+        void githubPromptAsync().catch(() => setError('Unable to open GitHub login.'));
+      }} />
+      <View style={styles.spacer} />
+      <Button title="Login with Google" disabled={!googleRequest || isSigningIn || isLoggingOut} onPress={() => {
+        setError(null);
+        if (!googleClientId) {
+          setError('Google sign-in is not configured for this platform yet.');
+          return;
+        }
+        void googlePromptAsync().catch(() => setError('Unable to open Google login.'));
+      }} />
+      {isSigningIn && <Text>Signing in...</Text>}
+      {!githubClientId && !googleClientId && <Text style={styles.subtitle}>Set your OAuth client IDs in app-frontend/.env to enable sign-in.</Text>}
       {error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
-      <View style={styles.spacer} />
-      <Button title="Try guardian creation" onPress={() => setShowGuardianDemo(true)} />
-      <View style={styles.spacer} />
-      <Button title="My rosters" onPress={() => setShowRosters(true)} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: '#ffffff' },
+  title: { fontSize: 32, fontWeight: '800', color: '#263a35', marginBottom: 8 },
+  subtitle: { color: '#52615a', marginBottom: 20, textAlign: 'center' },
   spacer: { height: 16 },
   error: { marginTop: 16, color: '#b3261e' },
 });

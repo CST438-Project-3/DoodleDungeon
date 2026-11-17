@@ -22,8 +22,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
-@AutoConfigureMockMvc
+@SpringBootTest(classes = com.cst438.doodledungeon.api.DoodleDungeonApiApplication.class, properties = {"spring.flyway.enabled=true", "app.jwt-secret=test-only-secret-at-least-32-characters-long"})
+@AutoConfigureMockMvc(addFilters = false)
 @Testcontainers
 class UserControllerIntegrationTest {
     private static final UUID USER_ID =
@@ -50,18 +50,8 @@ class UserControllerIntegrationTest {
     }
 
     @BeforeEach
-    void createTestUserTable() {
-        jdbcTemplate.execute("DROP TABLE IF EXISTS app_users");
-        jdbcTemplate.execute("""
-                CREATE TABLE app_users (
-                    id UUID PRIMARY KEY,
-                    email TEXT,
-                    display_name TEXT,
-                    avatar_url TEXT,
-                    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-                )
-                """);
+    void resetTestUser() {
+        jdbcTemplate.update("DELETE FROM app_users");
         jdbcTemplate.update(
                 """
                 INSERT INTO app_users (id, email, display_name, avatar_url)

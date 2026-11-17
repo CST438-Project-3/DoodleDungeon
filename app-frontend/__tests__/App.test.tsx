@@ -1,5 +1,12 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import App from '../App';
+import { loadSession, clearSession } from '../sessionStorage';
+
+jest.mock('../sessionStorage', () => ({
+  loadSession: jest.fn().mockResolvedValue(null),
+  saveSession: jest.fn().mockResolvedValue(undefined),
+  clearSession: jest.fn().mockResolvedValue(undefined),
+}));
 
 const mockRequest = {};
 const mockGithubPromptAsync = jest.fn();
@@ -27,13 +34,19 @@ function getButton(title: string) {
 
 describe('App', () => {
   beforeEach(() => {
-    jest.spyOn(global, 'fetch').mockResolvedValue({
+    process.env.EXPO_PUBLIC_GITHUB_ANDROID_CLIENT_ID = 'github-test';
+    process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID = 'google-test';
+    process.env.EXPO_PUBLIC_GITHUB_WEB_CLIENT_ID = 'github-test';
+    process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID = 'google-test';
+    jest.mocked(loadSession).mockResolvedValue(null);
+    jest.mocked(clearSession).mockClear();
+    jest.spyOn(global, 'fetch').mockImplementation(async url => ({
       ok: true,
-      json: async () => ({
+      json: async () => String(url).endsWith('/guardians') ? [] : ({
         token: 'session-token',
         user: { id: 'user-id', display_name: 'Test Player' },
       }),
-    } as Response);
+    } as Response));
     mockGithubResponse = null;
     mockGoogleResponse = null;
     mockGithubPromptAsync.mockReset().mockResolvedValue(undefined);
@@ -47,7 +60,7 @@ describe('App', () => {
   it('renders both login options when no response has been received', async () => {
     await render(<App />);
 
-    expect(getButton('Login with GitHub')).toBeEnabled();
+    expect(await screen.findByRole('button', { name: 'Login with GitHub' })).toBeEnabled();
     expect(getButton('Login with Google')).toBeEnabled();
   });
 
@@ -57,10 +70,10 @@ describe('App', () => {
     mockGithubResponse = { type: 'success', params: { code: 'github-code' } };
     await view.rerender(<App />);
 
-    expect(await screen.findByText('Signed in with GitHub.')).toBeOnTheScreen();
     expect(await screen.findByText('Welcome, Test Player!')).toBeOnTheScreen();
+    expect(getButton('Create guardian')).toBeOnTheScreen();
 
-    await fireEvent.press(getButton('Reset Login'));
+    await fireEvent.press(getButton('Log out'));
     await view.rerender(<App />);
 
     expect(getButton('Login with GitHub')).toBeOnTheScreen();
@@ -123,10 +136,46 @@ describe('App', () => {
     mockGithubPromptAsync.mockRejectedValueOnce(new Error('prompt failed'));
     await render(<App />);
 
-    await fireEvent.press(getButton('Login with GitHub'));
+    await fireEvent.press(await screen.findByRole('button', { name: 'Login with GitHub' }));
 
     await waitFor(() => {
       expect(screen.getByRole('alert')).toHaveTextContent('Unable to open GitHub login.');
     });
   });
+
+  it('does not show the creation button before login', async () => {
+    await render(<App />);
+    await screen.findByRole('button', { name: 'Login with GitHub' });
+    expect(screen.queryByRole('button', { name: 'Create guardian' })).toBeNull();
+  });
+
+  it('opens creation from the plus button after login', async () => {
+    const view = await render(<App />);
+    mockGithubResponse = { type: 'success', params: { code: 'github-code' } };
+    await view.rerender(<App />);
+    await fireEvent.press(await screen.findByRole('button', { name: 'Create guardian' }));
+    expect(screen.getByLabelText('Guardian name')).toBeOnTheScreen();
+    await fireEvent.press(getButton('Back to home'));
+    expect(screen.getByText('Your guardians')).toBeOnTheScreen();
+  });
+
+  it('clears an expired stored session instead of opening home', async () => {
+    jest.mocked(loadSession).mockResolvedValue(JSON.stringify({
+      auth: { token: 'bad-token', user: { id: 'old-user' } }, provider: 'GitHub',
+    }));
+    await render(<App />);
+    await screen.findByRole('button', { name: 'Login with GitHub' });
+    expect(clearSession).toHaveBeenCalled();
+    expect(screen.queryByText('Your guardians')).toBeNull();
+  });
+  it('shows a restore error even when saved-session cleanup also fails', async () => {
+    jest.mocked(loadSession).mockRejectedValueOnce(new Error('Storage unavailable'));
+    jest.mocked(clearSession).mockRejectedValueOnce(new Error('Storage unavailable'));
+    await render(<App />);
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Unable to restore your session. Please sign in again.',
+    );
+    expect(getButton('Login with GitHub')).toBeOnTheScreen();
+  });
+
 });

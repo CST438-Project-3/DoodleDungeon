@@ -12,8 +12,12 @@ jest.mock('../src/guardians/GuardianDrawing', () => {
   };
 });
 
+const onSave = jest.fn(async guardian => guardian);
+
+beforeEach(() => { onSave.mockClear(); });
+
 test('requires each field before creating a guardian', async () => {
-  await render(<CreateGuardianScreen onClose={jest.fn()} />);
+  await render(<CreateGuardianScreen onClose={jest.fn()} onSave={onSave} />);
   await fireEvent.press(screen.getByRole('button', { name: 'Create guardian' }));
   expect(screen.getByRole('alert')).toHaveTextContent('Enter a guardian name.');
   await fireEvent.changeText(screen.getByLabelText('Guardian name'), 'Moss Knight');
@@ -25,12 +29,13 @@ test('requires each field before creating a guardian', async () => {
 });
 
 test('creates a named guardian with its chosen class, then starts a fresh draft', async () => {
-  await render(<CreateGuardianScreen onClose={jest.fn()} />);
+  await render(<CreateGuardianScreen onClose={jest.fn()} onSave={onSave} />);
   await fireEvent.changeText(screen.getByLabelText('Guardian name'), '  Moss Knight  ');
   await fireEvent.press(screen.getByRole('radio', { name: 'Mage' }));
   await fireEvent.press(screen.getByRole('button', { name: 'Draw test stroke' }));
   await fireEvent.press(screen.getByRole('button', { name: 'Create guardian' }));
-  expect(screen.getByText('Guardian created')).toBeOnTheScreen();
+  expect(await screen.findByText('Guardian created')).toBeOnTheScreen();
+  expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ name: 'Moss Knight', guardianClass: 'Mage' }));
   expect(screen.getByText('Moss Knight')).toBeOnTheScreen();
   expect(screen.getByText('Mage')).toBeOnTheScreen();
   await fireEvent.press(screen.getByRole('button', { name: 'Create another guardian' }));
@@ -39,15 +44,41 @@ test('creates a named guardian with its chosen class, then starts a fresh draft'
   expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled();
 });
 
-test('undo and clear remove art, and the back button exits the demo', async () => {
+test('undo and clear remove art, and the back button returns home', async () => {
   const onClose = jest.fn();
-  await render(<CreateGuardianScreen onClose={onClose} />);
+  await render(<CreateGuardianScreen onClose={onClose} onSave={onSave} />);
   await fireEvent.press(screen.getByRole('button', { name: 'Draw test stroke' }));
   await fireEvent.press(screen.getByRole('button', { name: 'Undo' }));
   expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled();
   await fireEvent.press(screen.getByRole('button', { name: 'Draw test stroke' }));
   await fireEvent.press(screen.getByRole('button', { name: 'Clear art' }));
   expect(screen.getByRole('button', { name: 'Clear art' })).toBeDisabled();
-  await fireEvent.press(screen.getByRole('button', { name: 'Back to login' }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Back to home' }));
   expect(onClose).toHaveBeenCalledTimes(1);
+});
+
+test('keeps the draft when saving fails, and allows retrying', async () => {
+  const save = jest.fn().mockRejectedValueOnce(new Error('API is unavailable.')).mockImplementationOnce(async guardian => guardian);
+  await render(<CreateGuardianScreen onClose={jest.fn()} onSave={save} />);
+  await fireEvent.changeText(screen.getByLabelText('Guardian name'), 'Moss Knight');
+  await fireEvent.press(screen.getByRole('radio', { name: 'Mage' }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Draw test stroke' }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Create guardian' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('API is unavailable.');
+  expect(screen.getByLabelText('Guardian name')).toHaveDisplayValue('Moss Knight');
+  expect(screen.queryByText('Guardian created')).toBeNull();
+  await fireEvent.press(screen.getByRole('button', { name: 'Create guardian' }));
+  expect(await screen.findByText('Guardian created')).toBeOnTheScreen();
+});
+
+test('prevents duplicate requests while a save is pending', async () => {
+  const save = jest.fn(() => new Promise<never>(() => {}));
+  await render(<CreateGuardianScreen onClose={jest.fn()} onSave={save} />);
+  await fireEvent.changeText(screen.getByLabelText('Guardian name'), 'Moss Knight');
+  await fireEvent.press(screen.getByRole('radio', { name: 'Mage' }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Draw test stroke' }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Create guardian' }));
+  expect(screen.getByRole('button', { name: 'Saving...' })).toBeDisabled();
+  await fireEvent.press(screen.getByRole('button', { name: 'Saving...' }));
+  expect(save).toHaveBeenCalledTimes(1);
 });
