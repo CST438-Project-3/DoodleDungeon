@@ -9,6 +9,9 @@ import java.util.UUID;
 public interface RosterService {
 
     // TODO: Add a PostgreSQL-backed implementation when the roster tables and repository are ready.
+    // Use fixed SQL with bound parameters (JdbcTemplate ? placeholders) for every user value.
+    // Scope reads, updates, and deletes by BOTH roster ID and authenticated owner ID.
+    // Never concatenate guardian fields or IDs into SQL, even if the frontend validates them.
     // The owner ID is supplied by the authenticated request, not by client JSON.
     List<Roster> findByOwner(UUID userId);
 

@@ -80,6 +80,45 @@ describe('App', () => {
     });
   });
 
+  it('does not open Google when this platform has no configured client ID', async () => {
+    const webId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+    const androidId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
+    delete process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+    delete process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
+    try {
+      await render(<App />);
+      await fireEvent.press(getButton('Login with Google'));
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'Google sign-in is not configured for this platform yet.',
+      );
+      expect(mockGooglePromptAsync).not.toHaveBeenCalled();
+    } finally {
+      if (webId === undefined) delete process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+      else process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID = webId;
+      if (androidId === undefined) delete process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
+      else process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID = androidId;
+    }
+  });
+
+  it('opens Google when a public client ID is configured', async () => {
+    const webId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+    const androidId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
+    // Dummy IDs only; the unit test opens a mocked prompt, not Google's website.
+    process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID = '123-web.apps.googleusercontent.com';
+    process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID = '123-android.apps.googleusercontent.com';
+    try {
+      await render(<App />);
+      await fireEvent.press(getButton('Login with Google'));
+      expect(mockGooglePromptAsync).toHaveBeenCalledTimes(1);
+      expect(screen.queryByRole('alert')).toBeNull();
+    } finally {
+      if (webId === undefined) delete process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+      else process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID = webId;
+      if (androidId === undefined) delete process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
+      else process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID = androidId;
+    }
+  });
+
   it('shows an error when the GitHub login prompt fails', async () => {
     mockGithubPromptAsync.mockRejectedValueOnce(new Error('prompt failed'));
     await render(<App />);

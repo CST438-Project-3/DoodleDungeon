@@ -3,6 +3,7 @@ import { Button, Platform, StyleSheet, Text, View } from 'react-native';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import CreateGuardianScreen from './src/guardians/CreateGuardianScreen';
+import RostersScreen from './src/rosters/RostersScreen';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -57,6 +58,7 @@ export default function App() {
   const [session, setSession] = useState<AuthResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showGuardianDemo, setShowGuardianDemo] = useState(false);
+  const [showRosters, setShowRosters] = useState(false);
 
   // GitHub Auth Request
   const githubClientId = (Platform.OS === 'web'
@@ -77,7 +79,7 @@ export default function App() {
   // Google Auth Request
   const googleClientId = (Platform.OS === 'web'
     ? process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID
-    : process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID) || '';
+    : process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID)?.trim() || '';
 
   const googleRedirectUri = Platform.OS === 'web'
     ? process.env.EXPO_PUBLIC_GOOGLE_WEB_REDIRECT_URI || AuthSession.makeRedirectUri()
@@ -121,6 +123,10 @@ export default function App() {
     }
   }, [googleResponse]);
 
+  if (showRosters) {
+    return <RostersScreen token={session?.token ?? null} onClose={() => setShowRosters(false)} />;
+  }
+
   if (showGuardianDemo) {
     return <CreateGuardianScreen onClose={() => setShowGuardianDemo(false)} />;
   }
@@ -136,6 +142,12 @@ export default function App() {
           <View style={styles.spacer} />
           <Button title="Login with Google" disabled={!googleRequest} onPress={() => {
             setError(null);
+            // An AuthRequest can exist even with an empty ID. Catch missing configuration
+            // here instead of sending the user to Google's "missing client_id" error page.
+            if (!googleClientId) {
+              setError('Google sign-in is not configured for this platform yet.');
+              return;
+            }
             void googlePromptAsync().catch(() => setError('Unable to open Google login.'));
           }} />
         </>
@@ -157,6 +169,8 @@ export default function App() {
       {error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
       <View style={styles.spacer} />
       <Button title="Try guardian creation" onPress={() => setShowGuardianDemo(true)} />
+      <View style={styles.spacer} />
+      <Button title="My rosters" onPress={() => setShowRosters(true)} />
     </View>
   );
 }

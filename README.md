@@ -1,15 +1,15 @@
 # DoodleDungeon
 
 CST438 Project 3. React Native with Expo and TypeScript for web and Android,
-with a Spring Boot backend planned.
+with a Spring Boot backend under development.
 
 ## Structure
 
 - `app-frontend/`: Expo client.
-- `api-backend/`: Backend placeholder.
+- `api-backend/`: Spring controllers, schema migrations, and backend tests.
 - `docs/`: Requirements, architecture, API contract, and team documents.
 - `.github/workflows/`: Build checks and container image publishing.
-- `docker-compose.yml`: Local frontend build verification.
+- `docker-compose.yml`: Local frontend build verification and backend tests with PostgreSQL.
 
 ## Requirements
 
@@ -127,6 +127,8 @@ and publishes the image to GHCR on pushes to `main`.
 
 ## Current scope
 
-The frontend contains GitHub/Google sign-in UI and a local guardian creation
-demo. The backend is a placeholder in this checkout. The guardian demo does not
-write to an API or database.
+The frontend contains GitHub/Google sign-in UI, a local guardian creation demo,
+and a roster screen connected to the roster HTTP contract. Spring controllers,
+migrations, and tests exist; authentication and roster persistence still need
+integration for the full sign-in-to-roster flow. The guardian demo does not write
+to an API or database.
