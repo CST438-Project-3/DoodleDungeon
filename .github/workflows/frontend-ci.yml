@@ -54,7 +54,7 @@ jobs:
           gradle-version: '8.14.4'
 
       - name: Run Spring backend tests
-        run: gradle -p api-backend test
+        run: gradle -p api-backend test bootJar
 
   build:
     needs: backend-tests
