@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Button, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { Button, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import GuardianDrawing, { GuardianArtwork } from './GuardianDrawing';
 import { createGuardian, GUARDIAN_CLASSES, validateGuardian, type DrawingStroke, type Guardian, type GuardianClass } from './guardian';
 
@@ -14,7 +14,13 @@ const PALETTE = [
 ];
 
 
-export default function CreateGuardianScreen({ onClose }: { onClose: () => void }) {
+type Props = { onClose: () => void; onSave: (guardian: Guardian) => Promise<Guardian> };
+
+export default function CreateGuardianScreen({ onClose, onSave }: Props) {
+  const { width } = useWindowDimensions();
+  const wide = width >= 700;
+  const savingRef = useRef(false);
+  const [saving, setSaving] = useState(false);
   const [name, setName] = useState('');
   const [guardianClass, setGuardianClass] = useState<GuardianClass | null>(null);
   const [strokes, setStrokes] = useState<DrawingStroke[]>([]);
@@ -31,12 +37,30 @@ export default function CreateGuardianScreen({ onClose }: { onClose: () => void 
     setGuardian(null);
   }
 
+  async function save() {
+    if (savingRef.current) return;
+    const draft = { name, guardianClass, strokes };
+    const problem = validateGuardian(draft);
+    setError(problem);
+    if (problem) return;
+    savingRef.current = true;
+    setSaving(true);
+    try {
+      setGuardian(await onSave(createGuardian(draft)));
+    } catch (problem) {
+      setError(problem instanceof Error ? problem.message : 'Unable to save guardian. Please try again.');
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
+  }
+
   return (
     <ScrollView style={styles.page} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <View style={styles.form}>
-        <Button title="Back to login" onPress={onClose} />
+      <View style={[styles.form, wide && styles.wideForm]}>
+        <Button title="Back to home" disabled={saving} onPress={onClose} />
         <Text accessibilityRole="header" style={styles.title}>{guardian ? 'Guardian created' : 'Create a guardian'}</Text>
-        <Text style={styles.notice}>(Local Demo for now until connected to database :P)</Text>
+        <Text style={styles.notice}>{guardian ? 'Saved to your account.' : 'Name, draw, and save a guardian.'}</Text>
         {guardian ? (
           <>
             <View style={[styles.card, { backgroundColor: CLASS_COLORS[guardian.guardianClass] }]}>
@@ -49,47 +73,46 @@ export default function CreateGuardianScreen({ onClose }: { onClose: () => void 
             <Button title="Create another guardian" onPress={reset} />
           </>
         ) : (
-          <>
-            <Text style={styles.label}>Guardian name</Text>
-            <TextInput accessibilityLabel="Guardian name" placeholder="Name your guardian" value={name}
-              maxLength={150} style={styles.input} onChangeText={value => { setName(value); setError(null); }} />
+          <View style={[styles.fields, wide && styles.columns]} pointerEvents={saving ? "none" : "auto"}>
+            <View style={styles.details}>
+              <Text style={styles.label}>Guardian name</Text>
+              <TextInput accessibilityLabel="Guardian name" placeholder="Name your guardian" value={name}
+                maxLength={150} style={styles.input} onChangeText={value => { setName(value); setError(null); }} />
 
-            <Text style={styles.label}>Class</Text>
-            <View accessibilityRole="radiogroup" accessibilityLabel="Guardian class" style={styles.options}>
-              {GUARDIAN_CLASSES.map(option => (
-                <Pressable key={option} accessibilityRole="radio" accessibilityLabel={option}
-                  accessibilityState={{ checked: guardianClass === option }}
-                  onPress={() => { setGuardianClass(option); setError(null); }}
-                  style={[styles.classOption, guardianClass === option && { backgroundColor: CLASS_COLORS[option] }]}>
-                  <Text style={[styles.optionText, guardianClass === option && styles.selectedText]}>{option}</Text>
-                </Pressable>
-              ))}
-            </View>
+              <Text style={styles.label}>Class</Text>
+              <View accessibilityRole="radiogroup" accessibilityLabel="Guardian class" style={styles.options}>
+                {GUARDIAN_CLASSES.map(option => (
+                  <Pressable key={option} accessibilityRole="radio" accessibilityLabel={option}
+                    accessibilityState={{ checked: guardianClass === option }}
+                    onPress={() => { setGuardianClass(option); setError(null); }}
+                    style={[styles.classOption, guardianClass === option && { backgroundColor: CLASS_COLORS[option] }]}>
+                    <Text style={[styles.optionText, guardianClass === option && styles.selectedText]}>{option}</Text>
+                  </Pressable>
+                ))}
+              </View>
 
-            <Text style={styles.label}>Art</Text>
-            <Text style={styles.help}>Draw directly on the white area.</Text>
-            <GuardianDrawing strokes={strokes} color={brush} onChange={value => { setStrokes(value); setError(null); }} />
-            <View style={styles.options}>
-              {PALETTE.map(color => (
-                <Pressable key={color.name} accessibilityRole="button" accessibilityLabel={`${color.name} brush`}
-                  accessibilityState={{ selected: brush === color.color }} onPress={() => setBrush(color.color)}
-                  style={[styles.swatch, brush === color.color && styles.selectedSwatch]}>
-                  <View style={[styles.swatchColor, { backgroundColor: color.color }]} />
-                </Pressable>
-              ))}
+              {error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
+              <Button title={saving ? 'Saving...' : 'Create guardian'} disabled={saving} onPress={() => void save()} />
             </View>
-            <View style={styles.options}>
-              <Button title="Undo" disabled={!strokes.length} onPress={() => setStrokes(value => value.slice(0, -1))} />
-              <Button title="Clear art" disabled={!strokes.length} onPress={() => setStrokes([])} />
+            <View style={styles.drawing}>
+              <Text style={styles.label}>Art</Text>
+              <Text style={styles.help}>Draw directly on the white area.</Text>
+              <GuardianDrawing strokes={strokes} color={brush} onChange={value => { setStrokes(value); setError(null); }} />
+              <View style={styles.options}>
+                {PALETTE.map(color => (
+                  <Pressable key={color.name} accessibilityRole="button" accessibilityLabel={`${color.name} brush`}
+                    accessibilityState={{ selected: brush === color.color }} onPress={() => setBrush(color.color)}
+                    style={[styles.swatch, brush === color.color && styles.selectedSwatch]}>
+                    <View style={[styles.swatchColor, { backgroundColor: color.color }]} />
+                  </Pressable>
+                ))}
+              </View>
+              <View style={styles.options}>
+                <Button title="Undo" disabled={!strokes.length} onPress={() => setStrokes(value => value.slice(0, -1))} />
+                <Button title="Clear art" disabled={!strokes.length} onPress={() => setStrokes([])} />
+              </View>
             </View>
-            {error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
-            <Button title="Create guardian" onPress={() => {
-              const draft = { name, guardianClass, strokes };
-              const problem = validateGuardian(draft);
-              setError(problem);
-              if (!problem) setGuardian(createGuardian(draft));
-            }} />
-          </>
+          </View>
         )}
       </View>
     </ScrollView>
@@ -100,6 +123,11 @@ const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: '#ffffff' },
   content: { alignItems: 'center', padding: 24 },
   form: { width: '100%', maxWidth: 420, gap: 16 },
+  wideForm: { maxWidth: 940 },
+  fields: { gap: 24 },
+  columns: { flexDirection: 'row', alignItems: 'flex-start' },
+  details: { flex: 1, gap: 16, minWidth: 220 },
+  drawing: { width: '100%', maxWidth: 320, gap: 12, alignSelf: 'center' },
   title: { fontSize: 28, fontWeight: '700', marginTop: 8, color: '#222222' },
   notice: { fontSize: 14, lineHeight: 20, color: '#555555' },
   label: { fontSize: 16, fontWeight: '600', color: '#222222' },
@@ -115,6 +143,6 @@ const styles = StyleSheet.create({
   error: { color: '#b3261e', lineHeight: 22 },
   card: { padding: 16, borderRadius: 12, gap: 16 },
   cardName: { fontSize: 24, fontWeight: '700', textAlign: 'center', color: '#ffffff' },
-  previewArt: { width: '100%', aspectRatio: 1, backgroundColor: '#ffffff' },
+  previewArt: { width: 240, aspectRatio: 1, backgroundColor: '#ffffff' },
   cardClass: { fontSize: 20, fontWeight: '600', textAlign: 'center', color: '#ffffff' },
 });
