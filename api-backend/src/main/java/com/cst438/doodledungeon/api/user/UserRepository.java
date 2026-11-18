@@ -1,6 +1,5 @@
-package doodledungeon.repository;
+package com.cst438.doodledungeon.api.user;
 
-import doodledungeon.dto.UserProfile;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 

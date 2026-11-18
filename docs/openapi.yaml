@@ -16,6 +16,8 @@ tags:
     description: Create and view the signed-in user's guardians.
   - name: Rosters
     description: Manage the signed-in user's rosters.
+  - name: Admin
+    description: Moderate guardians across user accounts.
 
 paths:
   /guardians:
@@ -413,6 +415,73 @@ paths:
         '404':
           description: The user's profile was not found.
 
+  /admin/guardians:
+    get:
+      operationId: listGuardiansForModeration
+      summary: List guardians for moderation
+      description: Returns guardians across user accounts for an administrator to review.
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Guardians available for moderation.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminGuardian'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: The signed-in user is not an administrator.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/guardians/{id}:
+    delete:
+      operationId: deleteGuardianForModeration
+      summary: Delete a guardian during moderation
+      description: Deletes a guardian by ID. Requires an administrator account.
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: The guardian was deleted.
+        '400':
+          description: The guardian ID is not a UUID.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: The signed-in user is not an administrator.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Guardian not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
 components:
   responses:
     Unauthorized:
@@ -495,6 +564,29 @@ components:
         artUrl:
           type: string
           description: SVG data URL generated from validated drawing strokes. Legacy guardians may use an external image URL.
+        createdAt:
+          type: string
+          format: date-time
+    AdminGuardian:
+      type: object
+      required: [id, ownerUserId, guardianClass, artUrl, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        ownerUserId:
+          type: string
+          format: uuid
+          description: ID of the user who owns the guardian.
+        name:
+          type: string
+          nullable: true
+        guardianClass:
+          type: string
+          enum: [Warrior, Brawler, Ranger, Mage]
+        artUrl:
+          type: string
+          description: SVG data URL or legacy external image URL.
         createdAt:
           type: string
           format: date-time

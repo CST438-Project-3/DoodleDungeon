@@ -1,4 +1,4 @@
-package doodledungeon.dto;
+package com.cst438.doodledungeon.api.user;
 
 import java.util.UUID;
 
