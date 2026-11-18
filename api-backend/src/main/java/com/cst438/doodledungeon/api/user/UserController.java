@@ -1,8 +1,5 @@
-package doodledungeon.controller;
+package com.cst438.doodledungeon.api.user;
 
-import doodledungeon.dto.UpdateUserProfileRequest;
-import doodledungeon.dto.UserProfile;
-import doodledungeon.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
