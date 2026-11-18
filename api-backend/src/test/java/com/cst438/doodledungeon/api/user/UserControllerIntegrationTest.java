@@ -1,4 +1,4 @@
-package doodledungeon.controller;
+package com.cst438.doodledungeon.api.user;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
